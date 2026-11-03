@@ -137,7 +137,7 @@
             accel: 0.08,           // Acceleration rate
             friction: 0.96,        // Friction / drag coefficient when releasing controls
             turnSpeed: 0.055,      // Steering angle change speed
-            color: '#3b82f6'       // Player car color
+            color: '#2563eb'       // Player car color (Cobalt Blue)
         };
 
         // Target Parking Spot
@@ -183,8 +183,6 @@
             canvas.width = CANVAS_SIZE;
             canvas.height = CANVAS_SIZE;
 
-            // Compute vehicle speed: travel entire canvas width in 4 seconds
-            // 400px / 4 seconds = 100 px/sec => ~1.66 px/frame at 60fps
             player.speed = CANVAS_SIZE / (4 * 60);
 
             // Bind Event Listeners
@@ -229,16 +227,11 @@
             player.maxSpeed = 2.2;
             player.accel = 0.08;
 
-            // Generate initial structural walls (Fixed obstacles)
             generateWalls();
-
-            // Generate first parking setup
             generateParkingLayout();
 
-            // Show Play Screen
             showScreen(screenPlay);
 
-            // Start Timer Interval
             clearInterval(timerInterval);
             timerInterval = setInterval(() => {
                 timeLeft--;
@@ -249,40 +242,30 @@
                 }
             }, 1000);
 
-            // Cancel any old loop and start main loop
             if (animationFrameId) cancelAnimationFrame(animationFrameId);
-            lastTime = performance.now();
             animationFrameId = requestAnimationFrame(gameLoop);
         }
 
-        // Generate Fixed Map Structural Walls (Pillars and L/U-shaped barriers)
         function generateWalls() {
             walls = [
-                // Central Pillars (Square Blocks)
                 { x: 130, y: 130, width: 30, height: 30 },
                 { x: 240, y: 240, width: 30, height: 30 },
-                
-                // Horizontal / Vertical Barrier Walls (L & ㄷ shape obstructions)
-                { x: 130, y: 160, width: 15, height: 70 },  // Wall segment 1
-                { x: 255, y: 170, width: 70, height: 15 },  // Wall segment 2
-                { x: 70,  y: 280, width: 80, height: 15 }   // Wall segment 3
+                { x: 130, y: 160, width: 15, height: 70 },
+                { x: 255, y: 170, width: 70, height: 15 },
+                { x: 70,  y: 280, width: 80, height: 15 }
             ];
         }
 
-        // Generate Target Spot and Dynamic Random Static Obstacle Vehicles
         function generateParkingLayout() {
             const margin = 30;
             const spotW = 32;
             const spotH = 48;
-
             const playerBoundingRadius = 35;
 
-            // Helper: Check if target rectangle collides with any fixed wall
             const checkWallOverlap = (rect, padding = 5) => {
                 return walls.some(w => checkAABBOverlap(rect, w, padding));
             };
 
-            // Generate Random Target Spot (Avoiding player current position and walls)
             let validSpot = false;
             let spotAttempts = 0;
             while (!validSpot && spotAttempts < 100) {
@@ -300,7 +283,6 @@
                 }
             }
 
-            // Calculate obstacle car count: starts at 2, increases with score up to 8
             const obstacleCount = Math.min(2 + Math.floor(score * 0.75), 8);
             obstacles = [];
 
@@ -316,7 +298,6 @@
 
                     const testObstacle = { x: obsX, y: obsY, width: spotW, height: spotH };
 
-                    // Distance check from player
                     const distToPlayer = Math.hypot(
                         (obsX + spotW / 2) - player.x,
                         (obsY + spotH / 2) - player.y
@@ -325,17 +306,14 @@
                         overlap = true;
                     }
 
-                    // Don't overlap target spot
                     if (checkAABBOverlap(testObstacle, targetSpot, 15)) {
                         overlap = true;
                     }
 
-                    // Don't overlap fixed map structural walls
                     if (checkWallOverlap(testObstacle, 5)) {
                         overlap = true;
                     }
 
-                    // Don't overlap existing obstacle cars
                     for (let obs of obstacles) {
                         if (checkAABBOverlap(testObstacle, obs, 10)) {
                             overlap = true;
@@ -357,7 +335,6 @@
             }
         }
 
-        // Helper: Simple Axis-Aligned Bounding Box (AABB) Overlap for static obstacles
         function checkAABBOverlap(r1, r2, padding = 0) {
             return !(r1.x + r1.width + padding < r2.x ||
                      r1.x - padding > r2.x + r2.width ||
@@ -365,14 +342,12 @@
                      r1.y - padding > r2.y + r2.height);
         }
 
-        // Get 4 Corner Coordinates of Rotated Player Vehicle
         function getPlayerCorners() {
             const cos = Math.cos(player.angle);
             const sin = Math.sin(player.angle);
             const hw = player.width / 2;
             const hh = player.height / 2;
 
-            // Offsets relative to center (0, 0)
             const corners = [
                 { x: -hw, y: -hh },
                 { x:  hw, y: -hh },
@@ -386,9 +361,7 @@
             }));
         }
 
-        // Check collision between Rotated Player Corners and Axis-Aligned Rect
         function checkRotatedRectOverlap(corners, rect) {
-            // Check if any corner is inside rect
             for (let pt of corners) {
                 if (pt.x >= rect.x && pt.x <= rect.x + rect.width &&
                     pt.y >= rect.y && pt.y <= rect.y + rect.height) {
@@ -396,12 +369,11 @@
                 }
             }
 
-            // Line-segment intersection test between car edges & rect edges
             const rectEdges = [
                 { p1: { x: rect.x, y: rect.y }, p2: { x: rect.x + rect.width, y: rect.y } },
                 { p1: { x: rect.x + rect.width, y: rect.y }, p2: { x: rect.x + rect.width, y: rect.y + rect.height } },
                 { p1: { x: rect.x + rect.width, y: rect.y + rect.height }, p2: { x: rect.x, y: rect.y + rect.height } },
-                { p1: { x: rect.x, y: rect.y + rect.height }, p2: { x: rect.x, y: rect.y } }
+                { p1: { x: rect.x, y: rect.y }, p2: { x: rect.x, y: rect.y + rect.height } }
             ];
 
             for (let i = 0; i < 4; i++) {
@@ -418,15 +390,12 @@
             return false;
         }
 
-        // 2D Line Segment Intersection Helper
         function linesIntersect(a, b, c, d) {
             const ccw = (p1, p2, p3) => (p3.y - p1.y) * (p2.x - p1.x) > (p2.y - p1.y) * (p3.x - p1.x);
             return (ccw(a, c, d) !== ccw(b, c, d)) && (ccw(a, b, c) !== ccw(a, b, d));
         }
 
-        // Main Animation Game Loop
-        let lastTime = 0;
-        function gameLoop(timestamp) {
+        function gameLoop() {
             if (isGameOver) return;
 
             update();
@@ -435,10 +404,8 @@
             animationFrameId = requestAnimationFrame(gameLoop);
         }
 
-        // Game State Update (Physics & Controls)
         function update() {
-            // 1. Acceleration / Drive Controls (Up = Forward, Down = Reverse)
-            const currentMaxSpeed = player.maxSpeed + (score * 0.12); // Speed increases with score
+            const currentMaxSpeed = player.maxSpeed + (score * 0.12);
             const currentAccel = player.accel + (score * 0.005);
 
             if (keys.Up) {
@@ -446,32 +413,23 @@
                 if (player.speed > currentMaxSpeed) player.speed = currentMaxSpeed;
             } else if (keys.Down) {
                 player.speed -= currentAccel;
-                if (player.speed < -currentMaxSpeed * 0.6) player.speed = -currentMaxSpeed * 0.6; // Reverse speed limit
+                if (player.speed < -currentMaxSpeed * 0.6) player.speed = -currentMaxSpeed * 0.6;
             } else {
-                // Apply Friction (Inertia deceleration)
                 player.speed *= player.friction;
                 if (Math.abs(player.speed) < 0.01) player.speed = 0;
             }
 
-            // 2. Steering Controls (Left / Right heading turn)
-            // Steering efficiency depends on vehicle movement
             if (Math.abs(player.speed) > 0.05) {
-                const dir = player.speed > 0 ? 1 : -1; // Reverse steering direction when backing up
-                if (keys.Left) {
-                    player.angle -= player.turnSpeed * dir;
-                }
-                if (keys.Right) {
-                    player.angle += player.turnSpeed * dir;
-                }
+                const dir = player.speed > 0 ? 1 : -1;
+                if (keys.Left) player.angle -= player.turnSpeed * dir;
+                if (keys.Right) player.angle += player.turnSpeed * dir;
             }
 
-            // Update Position based on Heading Angle & Inertia Speed
             player.x += Math.sin(player.angle) * player.speed;
             player.y -= Math.cos(player.angle) * player.speed;
 
             const corners = getPlayerCorners();
 
-            // 3. Collision Detection with Outer Canvas Boundaries
             for (let pt of corners) {
                 if (pt.x < 0 || pt.x > CANVAS_SIZE || pt.y < 0 || pt.y > CANVAS_SIZE) {
                     endGame('외곽 벽에 충돌했습니다!');
@@ -479,7 +437,6 @@
                 }
             }
 
-            // 4. Collision Detection with Fixed Map Walls
             for (let w of walls) {
                 if (checkRotatedRectOverlap(corners, w)) {
                     endGame('구조물 벽에 충돌했습니다!');
@@ -487,7 +444,6 @@
                 }
             }
 
-            // 5. Collision Detection with Parked Vehicles
             for (let obs of obstacles) {
                 if (checkRotatedRectOverlap(corners, obs)) {
                     endGame('주차된 차량에 충돌했습니다!');
@@ -495,28 +451,21 @@
                 }
             }
 
-            // 6. Check Parking Spot Full Containment Condition
-            // ALL 4 corners of player car must be strictly inside the target spot
             let fullyInside = corners.every(pt => 
                 pt.x >= targetSpot.x && pt.x <= targetSpot.x + targetSpot.width &&
                 pt.y >= targetSpot.y && pt.y <= targetSpot.y + targetSpot.height
             );
 
             if (fullyInside) {
-                // Parking Success!
                 score++;
                 scoreVal.textContent = score;
-
-                // Generate new parking layout
                 generateParkingLayout();
             }
         }
 
-        // Game Canvas Render
         function render() {
             ctx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
 
-            // Draw Parking Lot Floor Grid Lines
             ctx.strokeStyle = '#1e293b';
             ctx.lineWidth = 1;
             for (let i = 0; i < CANVAS_SIZE; i += 40) {
@@ -526,7 +475,6 @@
                 ctx.stroke();
             }
 
-            // Draw Fixed Structural Walls / Pillars
             ctx.fillStyle = '#475569';
             ctx.strokeStyle = '#334155';
             ctx.lineWidth = 2;
@@ -534,18 +482,16 @@
                 ctx.fillRect(w.x, w.y, w.width, w.height);
                 ctx.strokeRect(w.x, w.y, w.width, w.height);
                 
-                // Inner detail stripe
                 ctx.fillStyle = '#64748b';
                 ctx.fillRect(w.x + 2, w.y + 2, Math.max(1, w.width - 4), Math.max(1, w.height - 4));
                 ctx.fillStyle = '#475569';
             }
 
-            // Draw Target Parking Spot (Dashed Green Box + "P" text)
             ctx.strokeStyle = '#10b981';
             ctx.lineWidth = 2.5;
             ctx.setLineDash([5, 5]);
             ctx.strokeRect(targetSpot.x, targetSpot.y, targetSpot.width, targetSpot.height);
-            ctx.setLineDash([]); // Reset line dash
+            ctx.setLineDash([]);
 
             ctx.fillStyle = 'rgba(16, 185, 129, 0.15)';
             ctx.fillRect(targetSpot.x, targetSpot.y, targetSpot.width, targetSpot.height);
@@ -556,16 +502,14 @@
             ctx.textBaseline = 'middle';
             ctx.fillText('P', targetSpot.x + targetSpot.width / 2, targetSpot.y + targetSpot.height / 2);
 
-            // Draw Static Obstacle Vehicles (Unrotated)
             for (let obs of obstacles) {
                 drawStaticCar(obs.x, obs.y, obs.width, obs.height, obs.color);
             }
 
-            // Draw Player Vehicle (Rotated based on player.angle)
             drawPlayerCar();
         }
 
-        // Draw Rotated Player Vehicle with Heading Visuals
+        // ==================== [수정된 플레이어 차량 시각화] ====================
         function drawPlayerCar() {
             ctx.save();
             ctx.translate(player.x, player.y);
@@ -576,53 +520,86 @@
             const hw = w / 2;
             const hh = h / 2;
 
-            // Car Body Shadow / Glow
-            ctx.shadowColor = 'rgba(59, 130, 246, 0.4)';
-            ctx.shadowBlur = 8;
+            // 1. 헤드라이트 전방 조명 빔 (가장 바깥쪽 반투명 황색 광선)
+            const beamGradient = ctx.createLinearGradient(0, -hh, 0, -hh - 18);
+            beamGradient.addColorStop(0, 'rgba(254, 240, 138, 0.5)');
+            beamGradient.addColorStop(1, 'rgba(254, 240, 138, 0)');
 
-            // Car Body
-            ctx.fillStyle = player.color;
+            ctx.fillStyle = beamGradient;
             ctx.beginPath();
-            ctx.roundRect(-hw, -hh, w, h, 4);
-            ctx.fill();
-
-            ctx.shadowBlur = 0; // Reset shadow
-
-            // Windshields
-            ctx.fillStyle = '#0f172a';
-            // Front Windshield (Facing Up in vehicle local space)
-            ctx.fillRect(-hw + 3, -hh + 6, w - 6, 7);
-            // Rear Windshield
-            ctx.fillRect(-hw + 3, hh - 11, w - 6, 5);
-
-            // Front Headlights (Yellow glowing)
-            ctx.fillStyle = '#fef08a';
-            ctx.fillRect(-hw + 2, -hh + 1, 4, 2);
-            ctx.fillRect(hw - 6, -hh + 1, 4, 2);
-
-            // Rear Taillights (Red)
-            ctx.fillStyle = '#ef4444';
-            ctx.fillRect(-hw + 2, hh - 3, 4, 2);
-            ctx.fillRect(hw - 6, hh - 3, 4, 2);
-
-            // Direction Indicator Arrow on Hood
-            ctx.fillStyle = '#ffffff';
-            ctx.beginPath();
-            ctx.moveTo(0, -hh + 3);
-            ctx.lineTo(-3, -hh + 9);
-            ctx.lineTo(3, -hh + 9);
+            ctx.moveTo(-hw + 2, -hh);
+            ctx.lineTo(-hw - 6, -hh - 18);
+            ctx.lineTo(hw + 6, -hh - 18);
+            ctx.lineTo(hw - 2, -hh);
             ctx.closePath();
             ctx.fill();
 
-            // Highlight border for Player
+            // 2. 차량 본체 그림자 & 차체 베이스
+            ctx.shadowColor = 'rgba(37, 99, 235, 0.5)';
+            ctx.shadowBlur = 10;
+
+            ctx.fillStyle = player.color;
+            ctx.beginPath();
+            ctx.roundRect(-hw, -hh, w, h, [6, 6, 3, 3]); // 전면은 더 둥글게, 후면은 각지게
+            ctx.fill();
+            ctx.shadowBlur = 0;
+
+            // 3. 사이드미러 (앞쪽 전면부 강조)
+            ctx.fillStyle = '#1d4ed8';
+            ctx.fillRect(-hw - 3, -hh + 8, 3, 5); // 왼쪽 사이드미러
+            ctx.fillRect(hw, -hh + 8, 3, 5);      // 오른쪽 사이드미러
+
+            // 4. 지붕 & 유리창 구조
+            ctx.fillStyle = '#0f172a'; // 어두운 유리창 색상
+            // 앞유리 (곡선 보닛형)
+            ctx.beginPath();
+            ctx.moveTo(-hw + 2, -hh + 12);
+            ctx.lineTo(-hw + 4, -hh + 6);
+            ctx.lineTo(hw - 4, -hh + 6);
+            ctx.lineTo(hw - 2, -hh + 12);
+            ctx.closePath();
+            ctx.fill();
+
+            // 루프(지붕)
+            ctx.fillStyle = '#1e40af';
+            ctx.fillRect(-hw + 3, -hh + 13, w - 6, 12);
+
+            // 뒷유리 (직사각형)
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(-hw + 3, hh - 10, w - 6, 5);
+
+            // 5. 전면 보닛 전진 방향 화살표 & 헤드라이트 (밝은 노란색 LED)
+            // LED 헤드라이트 (앞쪽 상단)
+            ctx.fillStyle = '#fef08a';
+            ctx.fillRect(-hw + 1, -hh - 1, 5, 3);
+            ctx.fillRect(hw - 6, -hh - 1, 5, 3);
+
+            // 보닛 위 직관적 전진 화살표
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.moveTo(0, -hh + 1);
+            ctx.lineTo(-4, -hh + 5);
+            ctx.lineTo(-2, -hh + 5);
+            ctx.lineTo(-2, -hh + 9);
+            ctx.lineTo(2, -hh + 9);
+            ctx.lineTo(2, -hh + 5);
+            ctx.lineTo(4, -hh + 5);
+            ctx.closePath();
+            ctx.fill();
+
+            // 6. 후면 테일램프 (후면 빨간색 표시)
+            ctx.fillStyle = '#dc2626';
+            ctx.fillRect(-hw + 2, hh - 2, 5, 2);
+            ctx.fillRect(hw - 7, hh - 2, 5, 2);
+
+            // 차량 테두리 하이라이트
             ctx.strokeStyle = '#93c5fd';
-            ctx.lineWidth = 1.5;
+            ctx.lineWidth = 1.2;
             ctx.strokeRect(-hw, -hh, w, h);
 
             ctx.restore();
         }
 
-        // Draw Static Obstacle Cars (Simple Rect format)
         function drawStaticCar(x, y, w, h, color) {
             ctx.save();
             ctx.fillStyle = color;
@@ -645,7 +622,6 @@
             ctx.restore();
         }
 
-        // End Game Logic
         function endGame(reason) {
             isGameOver = true;
             clearInterval(timerInterval);
@@ -657,7 +633,6 @@
             showScreen(screenGameOver);
         }
 
-        // Controls Setup: Keyboard (Arrow Keys)
         function setupKeyboardControls() {
             window.addEventListener('keydown', (e) => {
                 if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) {
@@ -677,7 +652,6 @@
             });
         }
 
-        // Controls Setup: On-Screen Touch / Mouse Buttons
         function setupTouchControls() {
             const buttons = [
                 { id: 'btn-up', key: 'Up' },
@@ -699,12 +673,10 @@
                     keys[key] = false;
                 };
 
-                // Touch Events
                 btn.addEventListener('touchstart', startPress, { passive: false });
                 btn.addEventListener('touchend', endPress, { passive: false });
                 btn.addEventListener('touchcancel', endPress, { passive: false });
 
-                // Mouse Fallback for On-Screen Buttons
                 btn.addEventListener('mousedown', startPress);
                 btn.addEventListener('mouseup', endPress);
                 btn.addEventListener('mouseleave', endPress);
