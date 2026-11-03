@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>주차의 달인</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Touch action prevention to prevent scrolling/zooming on mobile buttons */
+        .touch-btn {
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        /* Ensure crisp rendering for pixel art/shapes on canvas */
+        canvas {
+            image-rendering: crisp-edges;
+            image-rendering: pixelated;
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-white font-sans flex flex-col items-center justify-center min-h-screen p-2 sm:p-4 select-none overflow-hidden">
+
+    <!-- Game Container (Max-width for responsive fit down to 360px screen) -->
+    <div id="game-container" class="w-full max-w-sm sm:max-w-md bg-slate-800 rounded-2xl shadow-2xl overflow-hidden border border-slate-700 flex flex-col relative">
+
+        <!-- ==================== 1. START SCREEN ==================== -->
+        <div id="screen-start" class="flex flex-col items-center justify-center p-8 space-y-6 text-center min-h-[480px]">
+            <div class="space-y-2">
+                <span class="text-xs uppercase tracking-widest text-emerald-400 font-bold">1분 주차 챌린지</span>
+                <h1 class="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-cyan-400">
+                    주차의 달인
+                </h1>
+            </div>
+            
+            <!-- Graphic Illustration (CSS/SVG) -->
+            <div class="w-32 h-32 bg-slate-700/50 rounded-full flex items-center justify-center border border-slate-600 my-4 shadow-inner">
+                <svg class="w-20 h-20 text-emerald-400" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/>
+                </svg>
+            </div>
+
+            <p class="text-slate-300 text-sm leading-relaxed px-2">
+                60초 동안 장애물과 벽을 피해<br>주차 칸 안에 차량을 무사히 올려놓으세요!
+            </p>
+
+            <button id="btn-start" class="w-full py-4 bg-emerald-500 hover:bg-emerald-400 active:bg-emerald-600 text-slate-950 font-bold text-lg rounded-xl shadow-lg transition-transform active:scale-95">
+                게임 시작하기
+            </button>
+        </div>
+
+        <!-- ==================== 2. PLAY SCREEN ==================== -->
+        <div id="screen-play" class="hidden flex-col items-center justify-between p-3 space-y-3">
+            
+            <!-- Top Dashboard (Score & Timer) -->
+            <div class="w-full flex justify-between items-center bg-slate-900/80 px-4 py-2.5 rounded-xl border border-slate-700/80">
+                <div class="flex items-center space-y-0.5 flex-col items-start">
+                    <span class="text-[10px] text-slate-400 uppercase tracking-wider">주차 성공</span>
+                    <div class="text-xl font-extrabold text-emerald-400"><span id="score-val">0</span>회</div>
+                </div>
+                <div class="flex items-center space-y-0.5 flex-col items-end">
+                    <span class="text-[10px] text-slate-400 uppercase tracking-wider">남은 시간</span>
+                    <div id="timer-box" class="text-xl font-mono font-extrabold text-cyan-400"><span id="timer-val">60</span>초</div>
+                </div>
+            </div>
+
+            <!-- Canvas Container -->
+            <div class="w-full relative aspect-square bg-slate-950 rounded-xl overflow-hidden border-2 border-slate-700">
+                <canvas id="gameCanvas" class="w-full h-full block"></canvas>
+            </div>
+
+            <!-- On-Screen Controls (4-Way Directional Touch Pad) -->
+            <div class="w-full max-w-[260px] py-1 flex flex-col items-center gap-1.5">
+                <div class="flex justify-center">
+                    <button id="btn-up" class="touch-btn w-14 h-12 bg-slate-700 hover:bg-slate-600 active:bg-emerald-600 text-white font-bold rounded-lg shadow border-b-4 border-slate-900 active:border-b-0 flex items-center justify-center text-xl">
+                        ▲
+                    </button>
+                </div>
+                <div class="flex justify-between w-full px-2">
+                    <button id="btn-left" class="touch-btn w-14 h-12 bg-slate-700 hover:bg-slate-600 active:bg-emerald-600 text-white font-bold rounded-lg shadow border-b-4 border-slate-900 active:border-b-0 flex items-center justify-center text-xl">
+                        ◀
+                    </button>
+                    <button id="btn-down" class="touch-btn w-14 h-12 bg-slate-700 hover:bg-slate-600 active:bg-emerald-600 text-white font-bold rounded-lg shadow border-b-4 border-slate-900 active:border-b-0 flex items-center justify-center text-xl">
+                        ▼
+                    </button>
+                    <button id="btn-right" class="touch-btn w-14 h-12 bg-slate-700 hover:bg-slate-600 active:bg-emerald-600 text-white font-bold rounded-lg shadow border-b-4 border-slate-900 active:border-b-0 flex items-center justify-center text-xl">
+                        ▶
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== 3. GAME OVER SCREEN ==================== -->
+        <div id="screen-gameover" class="hidden flex-col items-center justify-center p-8 space-y-6 text-center min-h-[480px]">
+            <div class="space-y-2">
+                <span id="gameover-reason" class="text-xs uppercase tracking-widest text-rose-400 font-bold">충돌했습니다!</span>
+                <h2 class="text-3xl font-extrabold text-white">게임 종료</h2>
+            </div>
+
+            <!-- Final Result Box -->
+            <div class="w-full bg-slate-900/90 rounded-2xl p-6 border border-slate-700 shadow-inner flex flex-col items-center space-y-2">
+                <span class="text-sm text-slate-400">최종 주차 성공 횟수</span>
+                <span id="final-score" class="text-5xl font-black text-emerald-400">0</span>
+                <span class="text-xs text-slate-500">회 성공</span>
+            </div>
+
+            <button id="btn-restart" class="w-full py-4 bg-emerald-500 hover:bg-emerald-400 active:bg-emerald-600 text-slate-950 font-bold text-lg rounded-xl shadow-lg transition-transform active:scale-95">
+                다시 하기
+            </button>
+        </div>
+
+    </div>
+
+    <script>
+        // Game Constants & Variables
+        const CANVAS_SIZE = 400; // Logical grid coordinates
+        const GAME_DURATION = 60; // 60 seconds
+        
+        let canvas, ctx;
+        let animationFrameId = null;
+        let timerInterval = null;
+        
+        let score = 0;
+        let timeLeft = GAME_DURATION;
+        let isGameOver = false;
+
+        // Player Vehicle Definition (Physics & Inertia based)
+        const player = {
+            x: 50,
+            y: 50,
+            width: 22,
+            height: 38,
+            angle: 0,              // Current heading angle (radians), 0 = pointing UP
+            speed: 0,              // Current linear speed (px/frame)
+            maxSpeed: 2.2,         // Dynamic base max speed
+            accel: 0.08,           // Acceleration rate
+            friction: 0.96,        // Friction / drag coefficient when releasing controls
+            turnSpeed: 0.055,      // Steering angle change speed
+            color: '#3b82f6'       // Player car color
+        };
+
+        // Target Parking Spot
+        let targetSpot = {
+            x: 0,
+            y: 0,
+            width: 32,
+            height: 48
+        };
+
+        // Static Parked Obstacle Cars
+        let obstacles = [];
+
+        // Fixed Structural Walls / Pillars
+        let walls = [];
+
+        // Input Direction Tracker
+        const keys = {
+            Up: false,
+            Down: false,
+            Left: false,
+            Right: false
+        };
+
+        // DOM Element References
+        const screenStart = document.getElementById('screen-start');
+        const screenPlay = document.getElementById('screen-play');
+        const screenGameOver = document.getElementById('screen-gameover');
+        
+        const btnStart = document.getElementById('btn-start');
+        const btnRestart = document.getElementById('btn-restart');
+        const scoreVal = document.getElementById('score-val');
+        const timerVal = document.getElementById('timer-val');
+        const finalScore = document.getElementById('final-score');
+        const gameoverReason = document.getElementById('gameover-reason');
+
+        // Initial setup on window load
+        window.onload = () => {
+            canvas = document.getElementById('gameCanvas');
+            ctx = canvas.getContext('2d');
+            
+            // Fixed internal render resolution for uniform physics
+            canvas.width = CANVAS_SIZE;
+            canvas.height = CANVAS_SIZE;
+
+            // Compute vehicle speed: travel entire canvas width in 4 seconds
+            // 400px / 4 seconds = 100 px/sec => ~1.66 px/frame at 60fps
+            player.speed = CANVAS_SIZE / (4 * 60);
+
+            // Bind Event Listeners
+            btnStart.addEventListener('click', startGame);
+            btnRestart.addEventListener('click', startGame);
+
+            setupKeyboardControls();
+            setupTouchControls();
+        };
+
+        // Switch Screen helper
+        function showScreen(screen) {
+            screenStart.classList.add('hidden');
+            screenPlay.classList.add('hidden');
+            screenGameOver.classList.add('hidden');
+
+            screenStart.classList.remove('flex');
+            screenPlay.classList.remove('flex');
+            screenGameOver.classList.remove('flex');
+
+            screen.classList.remove('hidden');
+            screen.classList.add('flex');
+        }
+
+        // Start Game
+        function startGame() {
+            score = 0;
+            timeLeft = GAME_DURATION;
+            isGameOver = false;
+
+            scoreVal.textContent = score;
+            timerVal.textContent = timeLeft;
+
+            // Reset Input
+            keys.Up = keys.Down = keys.Left = keys.Right = false;
+
+            // Spawn player at starting position with physics reset
+            player.x = 60;
+            player.y = 60;
+            player.angle = Math.PI; // Pointing downward into map
+            player.speed = 0;
+            player.maxSpeed = 2.2;
+            player.accel = 0.08;
+
+            // Generate initial structural walls (Fixed obstacles)
+            generateWalls();
+
+            // Generate first parking setup
+            generateParkingLayout();
+
+            // Show Play Screen
+            showScreen(screenPlay);
+
+            // Start Timer Interval
+            clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                timerVal.textContent = timeLeft;
+
+                if (timeLeft <= 0) {
+                    endGame('시간이 종료되었습니다!');
+                }
+            }, 1000);
+
+            // Cancel any old loop and start main loop
+            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+            lastTime = performance.now();
+            animationFrameId = requestAnimationFrame(gameLoop);
+        }
+
+        // Generate Fixed Map Structural Walls (Pillars and L/U-shaped barriers)
+        function generateWalls() {
+            walls = [
+                // Central Pillars (Square Blocks)
+                { x: 130, y: 130, width: 30, height: 30 },
+                { x: 240, y: 240, width: 30, height: 30 },
+                
+                // Horizontal / Vertical Barrier Walls (L & ㄷ shape obstructions)
+                { x: 130, y: 160, width: 15, height: 70 },  // Wall segment 1
+                { x: 255, y: 170, width: 70, height: 15 },  // Wall segment 2
+                { x: 70,  y: 280, width: 80, height: 15 }   // Wall segment 3
+            ];
+        }
+
+        // Generate Target Spot and Dynamic Random Static Obstacle Vehicles
+        function generateParkingLayout() {
+            const margin = 30;
+            const spotW = 32;
+            const spotH = 48;
+
+            const playerBoundingRadius = 35;
+
+            // Helper: Check if target rectangle collides with any fixed wall
+            const checkWallOverlap = (rect, padding = 5) => {
+                return walls.some(w => checkAABBOverlap(rect, w, padding));
+            };
+
+            // Generate Random Target Spot (Avoiding player current position and walls)
+            let validSpot = false;
+            let spotAttempts = 0;
+            while (!validSpot && spotAttempts < 100) {
+                targetSpot.x = Math.floor(Math.random() * (CANVAS_SIZE - spotW - margin * 2)) + margin;
+                targetSpot.y = Math.floor(Math.random() * (CANVAS_SIZE - spotH - margin * 2)) + margin;
+                spotAttempts++;
+
+                const distToPlayer = Math.hypot(
+                    (targetSpot.x + spotW / 2) - player.x,
+                    (targetSpot.y + spotH / 2) - player.y
+                );
+
+                if (distToPlayer > 80 && !checkWallOverlap(targetSpot, 5)) {
+                    validSpot = true;
+                }
+            }
+
+            // Calculate obstacle car count: starts at 2, increases with score up to 8
+            const obstacleCount = Math.min(2 + Math.floor(score * 0.75), 8);
+            obstacles = [];
+
+            for (let i = 0; i < obstacleCount; i++) {
+                let obsX, obsY;
+                let overlap = false;
+                let attempts = 0;
+
+                do {
+                    overlap = false;
+                    obsX = Math.floor(Math.random() * (CANVAS_SIZE - spotW - margin * 2)) + margin;
+                    obsY = Math.floor(Math.random() * (CANVAS_SIZE - spotH - margin * 2)) + margin;
+
+                    const testObstacle = { x: obsX, y: obsY, width: spotW, height: spotH };
+
+                    // Distance check from player
+                    const distToPlayer = Math.hypot(
+                        (obsX + spotW / 2) - player.x,
+                        (obsY + spotH / 2) - player.y
+                    );
+                    if (distToPlayer < playerBoundingRadius + 30) {
+                        overlap = true;
+                    }
+
+                    // Don't overlap target spot
+                    if (checkAABBOverlap(testObstacle, targetSpot, 15)) {
+                        overlap = true;
+                    }
+
+                    // Don't overlap fixed map structural walls
+                    if (checkWallOverlap(testObstacle, 5)) {
+                        overlap = true;
+                    }
+
+                    // Don't overlap existing obstacle cars
+                    for (let obs of obstacles) {
+                        if (checkAABBOverlap(testObstacle, obs, 10)) {
+                            overlap = true;
+                            break;
+                        }
+                    }
+                    attempts++;
+                } while (overlap && attempts < 60);
+
+                if (!overlap) {
+                    obstacles.push({
+                        x: obsX,
+                        y: obsY,
+                        width: spotW,
+                        height: spotH,
+                        color: ['#64748b', '#ef4444', '#eab308', '#a855f7', '#14b8a6', '#f97316'][i % 6]
+                    });
+                }
+            }
+        }
+
+        // Helper: Simple Axis-Aligned Bounding Box (AABB) Overlap for static obstacles
+        function checkAABBOverlap(r1, r2, padding = 0) {
+            return !(r1.x + r1.width + padding < r2.x ||
+                     r1.x - padding > r2.x + r2.width ||
+                     r1.y + r1.height + padding < r2.y ||
+                     r1.y - padding > r2.y + r2.height);
+        }
+
+        // Get 4 Corner Coordinates of Rotated Player Vehicle
+        function getPlayerCorners() {
+            const cos = Math.cos(player.angle);
+            const sin = Math.sin(player.angle);
+            const hw = player.width / 2;
+            const hh = player.height / 2;
+
+            // Offsets relative to center (0, 0)
+            const corners = [
+                { x: -hw, y: -hh },
+                { x:  hw, y: -hh },
+                { x:  hw, y:  hh },
+                { x: -hw, y:  hh }
+            ];
+
+            return corners.map(pt => ({
+                x: player.x + pt.x * cos - pt.y * sin,
+                y: player.y + pt.x * sin + pt.y * cos
+            }));
+        }
+
+        // Check collision between Rotated Player Corners and Axis-Aligned Rect
+        function checkRotatedRectOverlap(corners, rect) {
+            // Check if any corner is inside rect
+            for (let pt of corners) {
+                if (pt.x >= rect.x && pt.x <= rect.x + rect.width &&
+                    pt.y >= rect.y && pt.y <= rect.y + rect.height) {
+                    return true;
+                }
+            }
+
+            // Line-segment intersection test between car edges & rect edges
+            const rectEdges = [
+                { p1: { x: rect.x, y: rect.y }, p2: { x: rect.x + rect.width, y: rect.y } },
+                { p1: { x: rect.x + rect.width, y: rect.y }, p2: { x: rect.x + rect.width, y: rect.y + rect.height } },
+                { p1: { x: rect.x + rect.width, y: rect.y + rect.height }, p2: { x: rect.x, y: rect.y + rect.height } },
+                { p1: { x: rect.x, y: rect.y + rect.height }, p2: { x: rect.x, y: rect.y } }
+            ];
+
+            for (let i = 0; i < 4; i++) {
+                const p1 = corners[i];
+                const p2 = corners[(i + 1) % 4];
+
+                for (let edge of rectEdges) {
+                    if (linesIntersect(p1, p2, edge.p1, edge.p2)) {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        // 2D Line Segment Intersection Helper
+        function linesIntersect(a, b, c, d) {
+            const ccw = (p1, p2, p3) => (p3.y - p1.y) * (p2.x - p1.x) > (p2.y - p1.y) * (p3.x - p1.x);
+            return (ccw(a, c, d) !== ccw(b, c, d)) && (ccw(a, b, c) !== ccw(a, b, d));
+        }
+
+        // Main Animation Game Loop
+        let lastTime = 0;
+        function gameLoop(timestamp) {
+            if (isGameOver) return;
+
+            update();
+            render();
+
+            animationFrameId = requestAnimationFrame(gameLoop);
+        }
+
+        // Game State Update (Physics & Controls)
+        function update() {
+            // 1. Acceleration / Drive Controls (Up = Forward, Down = Reverse)
+            const currentMaxSpeed = player.maxSpeed + (score * 0.12); // Speed increases with score
+            const currentAccel = player.accel + (score * 0.005);
+
+            if (keys.Up) {
+                player.speed += currentAccel;
+                if (player.speed > currentMaxSpeed) player.speed = currentMaxSpeed;
+            } else if (keys.Down) {
+                player.speed -= currentAccel;
+                if (player.speed < -currentMaxSpeed * 0.6) player.speed = -currentMaxSpeed * 0.6; // Reverse speed limit
+            } else {
+                // Apply Friction (Inertia deceleration)
+                player.speed *= player.friction;
+                if (Math.abs(player.speed) < 0.01) player.speed = 0;
+            }
+
+            // 2. Steering Controls (Left / Right heading turn)
+            // Steering efficiency depends on vehicle movement
+            if (Math.abs(player.speed) > 0.05) {
+                const dir = player.speed > 0 ? 1 : -1; // Reverse steering direction when backing up
+                if (keys.Left) {
+                    player.angle -= player.turnSpeed * dir;
+                }
+                if (keys.Right) {
+                    player.angle += player.turnSpeed * dir;
+                }
+            }
+
+            // Update Position based on Heading Angle & Inertia Speed
+            player.x += Math.sin(player.angle) * player.speed;
+            player.y -= Math.cos(player.angle) * player.speed;
+
+            const corners = getPlayerCorners();
+
+            // 3. Collision Detection with Outer Canvas Boundaries
+            for (let pt of corners) {
+                if (pt.x < 0 || pt.x > CANVAS_SIZE || pt.y < 0 || pt.y > CANVAS_SIZE) {
+                    endGame('외곽 벽에 충돌했습니다!');
+                    return;
+                }
+            }
+
+            // 4. Collision Detection with Fixed Map Walls
+            for (let w of walls) {
+                if (checkRotatedRectOverlap(corners, w)) {
+                    endGame('구조물 벽에 충돌했습니다!');
+                    return;
+                }
+            }
+
+            // 5. Collision Detection with Parked Vehicles
+            for (let obs of obstacles) {
+                if (checkRotatedRectOverlap(corners, obs)) {
+                    endGame('주차된 차량에 충돌했습니다!');
+                    return;
+                }
+            }
+
+            // 6. Check Parking Spot Full Containment Condition
+            // ALL 4 corners of player car must be strictly inside the target spot
+            let fullyInside = corners.every(pt => 
+                pt.x >= targetSpot.x && pt.x <= targetSpot.x + targetSpot.width &&
+                pt.y >= targetSpot.y && pt.y <= targetSpot.y + targetSpot.height
+            );
+
+            if (fullyInside) {
+                // Parking Success!
+                score++;
+                scoreVal.textContent = score;
+
+                // Generate new parking layout
+                generateParkingLayout();
+            }
+        }
+
+        // Game Canvas Render
+        function render() {
+            ctx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+
+            // Draw Parking Lot Floor Grid Lines
+            ctx.strokeStyle = '#1e293b';
+            ctx.lineWidth = 1;
+            for (let i = 0; i < CANVAS_SIZE; i += 40) {
+                ctx.beginPath();
+                ctx.moveTo(i, 0); ctx.lineTo(i, CANVAS_SIZE);
+                ctx.moveTo(0, i); ctx.lineTo(CANVAS_SIZE, i);
+                ctx.stroke();
+            }
+
+            // Draw Fixed Structural Walls / Pillars
+            ctx.fillStyle = '#475569';
+            ctx.strokeStyle = '#334155';
+            ctx.lineWidth = 2;
+            for (let w of walls) {
+                ctx.fillRect(w.x, w.y, w.width, w.height);
+                ctx.strokeRect(w.x, w.y, w.width, w.height);
+                
+                // Inner detail stripe
+                ctx.fillStyle = '#64748b';
+                ctx.fillRect(w.x + 2, w.y + 2, Math.max(1, w.width - 4), Math.max(1, w.height - 4));
+                ctx.fillStyle = '#475569';
+            }
+
+            // Draw Target Parking Spot (Dashed Green Box + "P" text)
+            ctx.strokeStyle = '#10b981';
+            ctx.lineWidth = 2.5;
+            ctx.setLineDash([5, 5]);
+            ctx.strokeRect(targetSpot.x, targetSpot.y, targetSpot.width, targetSpot.height);
+            ctx.setLineDash([]); // Reset line dash
+
+            ctx.fillStyle = 'rgba(16, 185, 129, 0.15)';
+            ctx.fillRect(targetSpot.x, targetSpot.y, targetSpot.width, targetSpot.height);
+
+            ctx.fillStyle = '#10b981';
+            ctx.font = 'bold 16px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('P', targetSpot.x + targetSpot.width / 2, targetSpot.y + targetSpot.height / 2);
+
+            // Draw Static Obstacle Vehicles (Unrotated)
+            for (let obs of obstacles) {
+                drawStaticCar(obs.x, obs.y, obs.width, obs.height, obs.color);
+            }
+
+            // Draw Player Vehicle (Rotated based on player.angle)
+            drawPlayerCar();
+        }
+
+        // Draw Rotated Player Vehicle with Heading Visuals
+        function drawPlayerCar() {
+            ctx.save();
+            ctx.translate(player.x, player.y);
+            ctx.rotate(player.angle);
+
+            const w = player.width;
+            const h = player.height;
+            const hw = w / 2;
+            const hh = h / 2;
+
+            // Car Body Shadow / Glow
+            ctx.shadowColor = 'rgba(59, 130, 246, 0.4)';
+            ctx.shadowBlur = 8;
+
+            // Car Body
+            ctx.fillStyle = player.color;
+            ctx.beginPath();
+            ctx.roundRect(-hw, -hh, w, h, 4);
+            ctx.fill();
+
+            ctx.shadowBlur = 0; // Reset shadow
+
+            // Windshields
+            ctx.fillStyle = '#0f172a';
+            // Front Windshield (Facing Up in vehicle local space)
+            ctx.fillRect(-hw + 3, -hh + 6, w - 6, 7);
+            // Rear Windshield
+            ctx.fillRect(-hw + 3, hh - 11, w - 6, 5);
+
+            // Front Headlights (Yellow glowing)
+            ctx.fillStyle = '#fef08a';
+            ctx.fillRect(-hw + 2, -hh + 1, 4, 2);
+            ctx.fillRect(hw - 6, -hh + 1, 4, 2);
+
+            // Rear Taillights (Red)
+            ctx.fillStyle = '#ef4444';
+            ctx.fillRect(-hw + 2, hh - 3, 4, 2);
+            ctx.fillRect(hw - 6, hh - 3, 4, 2);
+
+            // Direction Indicator Arrow on Hood
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.moveTo(0, -hh + 3);
+            ctx.lineTo(-3, -hh + 9);
+            ctx.lineTo(3, -hh + 9);
+            ctx.closePath();
+            ctx.fill();
+
+            // Highlight border for Player
+            ctx.strokeStyle = '#93c5fd';
+            ctx.lineWidth = 1.5;
+            ctx.strokeRect(-hw, -hh, w, h);
+
+            ctx.restore();
+        }
+
+        // Draw Static Obstacle Cars (Simple Rect format)
+        function drawStaticCar(x, y, w, h, color) {
+            ctx.save();
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.roundRect(x, y, w, h, 4);
+            ctx.fill();
+
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(x + 3, y + 6, w - 6, 7);
+            ctx.fillRect(x + 3, y + h - 11, w - 6, 5);
+
+            ctx.fillStyle = '#cbd5e1';
+            ctx.fillRect(x + 2, y + 1, 4, 2);
+            ctx.fillRect(x + w - 6, y + 1, 4, 2);
+
+            ctx.fillStyle = '#ef4444';
+            ctx.fillRect(x + 2, y + h - 3, 4, 2);
+            ctx.fillRect(x + w - 6, y + h - 3, 4, 2);
+
+            ctx.restore();
+        }
+
+        // End Game Logic
+        function endGame(reason) {
+            isGameOver = true;
+            clearInterval(timerInterval);
+            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+
+            gameoverReason.textContent = reason;
+            finalScore.textContent = score;
+
+            showScreen(screenGameOver);
+        }
+
+        // Controls Setup: Keyboard (Arrow Keys)
+        function setupKeyboardControls() {
+            window.addEventListener('keydown', (e) => {
+                if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) {
+                    e.preventDefault();
+                }
+                if (e.key === 'ArrowUp') keys.Up = true;
+                if (e.key === 'ArrowDown') keys.Down = true;
+                if (e.key === 'ArrowLeft') keys.Left = true;
+                if (e.key === 'ArrowRight') keys.Right = true;
+            });
+
+            window.addEventListener('keyup', (e) => {
+                if (e.key === 'ArrowUp') keys.Up = false;
+                if (e.key === 'ArrowDown') keys.Down = false;
+                if (e.key === 'ArrowLeft') keys.Left = false;
+                if (e.key === 'ArrowRight') keys.Right = false;
+            });
+        }
+
+        // Controls Setup: On-Screen Touch / Mouse Buttons
+        function setupTouchControls() {
+            const buttons = [
+                { id: 'btn-up', key: 'Up' },
+                { id: 'btn-down', key: 'Down' },
+                { id: 'btn-left', key: 'Left' },
+                { id: 'btn-right', key: 'Right' }
+            ];
+
+            buttons.forEach(({ id, key }) => {
+                const btn = document.getElementById(id);
+
+                const startPress = (e) => {
+                    e.preventDefault();
+                    keys[key] = true;
+                };
+
+                const endPress = (e) => {
+                    e.preventDefault();
+                    keys[key] = false;
+                };
+
+                // Touch Events
+                btn.addEventListener('touchstart', startPress, { passive: false });
+                btn.addEventListener('touchend', endPress, { passive: false });
+                btn.addEventListener('touchcancel', endPress, { passive: false });
+
+                // Mouse Fallback for On-Screen Buttons
+                btn.addEventListener('mousedown', startPress);
+                btn.addEventListener('mouseup', endPress);
+                btn.addEventListener('mouseleave', endPress);
+            });
+        }
+    </script>
+</body>
+</html>
